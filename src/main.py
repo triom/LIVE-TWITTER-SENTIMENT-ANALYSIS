@@ -155,11 +155,10 @@ def insert_data(df):
             
                 print(f"Executing SQL with params: {params}")
                 cursor.execute(insert_query, params)
+                conn.commit()  # Commit if no exception
+                print("Data insertion committed successfully.")
             except Exception as e:
                 print(f"Insertion error {index} : {e}")
-
-        conn.commit()  # Commit if no exception
-        print("Data insertion committed successfully.")
     except Exception as e:
         print(f"Erreur globale pendant l'insertion : {e}")
     # close connection
@@ -169,6 +168,26 @@ def insert_data(df):
 
 
 if __name__ == "__main__":
+    df = pd.read_csv("../data/cleaned.csv")
+    df['retweets'] = 0
+    df['likes'] = 0
+    df_cleaned = df.dropna(subset=['sentiment_score'])  # This drops rows where sentiment_score is NaN
+    
+
+    # Drop rows where sentiment_score is NaN after coercion
+    df_cleaned = df_cleaned.dropna(subset=['sentiment_score'])
+    df_cleaned['sentiment_score'] = df_cleaned['sentiment_score'].apply(lambda x: round(x, 2))
+
+    # Convert sentiment_score to Decimal if required
+    df_cleaned['sentiment_score'] = df_cleaned['sentiment_score'].astype(float)
+
+    print(df_cleaned['sentiment_score'].head())
+
+    # print(df_cleaned.head())
+    insert_data(df_cleaned)
+
+# ************************************************************
+
     # df = pd.read_csv("../data/UK_data.csv")
     # Rename the columns in the DataFrame
     # df.rename(columns={
@@ -193,26 +212,3 @@ if __name__ == "__main__":
 
     # # Insert Data into SQL Server
     # insert_data(df_emotions)
-    
-    df = pd.read_csv("../data/cleaned.csv")
-    df['retweets'] = 0
-    df['likes'] = 0
-    df_cleaned = df.dropna(subset=['sentiment_score'])  # This drops rows where sentiment_score is NaN
-
-    # Ensure 'sentiment_score' is a float and drop rows with invalid values
-    df_cleaned['sentiment_score'] = pd.to_numeric(df_cleaned['sentiment_score'], errors='coerce')
-
-    # Drop rows where sentiment_score is NaN after coercion
-    df_cleaned = df_cleaned.dropna(subset=['sentiment_score'])
-
-   # Convert tweet_date to datetime format
-    df_cleaned['tweet_date'] = pd.to_datetime(df_cleaned['tweet_date'], errors='coerce')
-
-    # Ensure id_dist is a valid UUID
-    df_cleaned['id_dist'] = pd.to_numeric(df_cleaned['id_dist'], errors='coerce')
-
-    # Drop any rows with invalid data
-    df_cleaned = df_cleaned.dropna(subset=['tweet_date', 'id_dist'])
-
-    print(df_cleaned['sentiment_score'].head())
-    insert_data(df_cleaned)
