@@ -167,48 +167,80 @@ def insert_data(df):
 
 
 
-if __name__ == "__main__":
-    df = pd.read_csv("../data/cleaned.csv")
-    df['retweets'] = 0
-    df['likes'] = 0
-    df_cleaned = df.dropna(subset=['sentiment_score'])  # This drops rows where sentiment_score is NaN
-    
 
-    # Drop rows where sentiment_score is NaN after coercion
-    df_cleaned = df_cleaned.dropna(subset=['sentiment_score'])
-    df_cleaned['sentiment_score'] = df_cleaned['sentiment_score'].apply(lambda x: round(x, 2))
+# df = pd.read_csv("../data/cleaned.csv")
+# df['retweets'] = 0
+# df['likes'] = 0
+# df_cleaned = df.dropna(subset=['sentiment_score'])  # This drops rows where sentiment_score is NaN
 
-    # Convert sentiment_score to Decimal if required
-    df_cleaned['sentiment_score'] = df_cleaned['sentiment_score'].astype(float)
 
-    print(df_cleaned['sentiment_score'].head())
+# # Drop rows where sentiment_score is NaN after coercion
+# df_cleaned = df_cleaned.dropna(subset=['sentiment_score'])
+# df_cleaned['sentiment_score'] = df_cleaned['sentiment_score'].apply(lambda x: round(x, 2))
 
-    # print(df_cleaned.head())
-    insert_data(df_cleaned)
+# # Convert sentiment_score to Decimal if required
+# df_cleaned['sentiment_score'] = df_cleaned['sentiment_score'].astype(float)
+
+# print(df_cleaned['sentiment_score'].head())
+
+# # print(df_cleaned.head())
+# insert_data(df_cleaned)
 
 # ************************************************************
 
-    # df = pd.read_csv("../data/UK_data.csv")
-    # Rename the columns in the DataFrame
-    # df.rename(columns={
-    #     'Text': 'tweet_content',
-    #     'Created At': 'tweet_date','Text': 'tweet_content',
-    #     'Retweets': 'retweets',
-    #     'Likes': 'likes'
-    # }, inplace=True)
-    # print(df.head())
+df = pd.read_csv("data/UK_data.csv")
+# Rename the columns in the DataFrame
+df.rename(columns={
+    'Text': 'tweet_content',
+    'Created At': 'tweet_date','Text': 'tweet_content',
+    'Retweets': 'retweets',
+    'Likes': 'likes',
+    'Country': 'tweet_location'
+}, inplace=True)
 
-    # # Data Cleaning and Preparation
-    # df_cleaned = data_cleaning_and_preparation(df, 'tweet_content')
+# Data Cleaning and Preparation
+print("Nettoyage et préparation des données")
+df_cleaned = data_cleaning_and_preparation(df, 'tweet_content')
 
-    # # Sentiment Analysis using Transformers
-    # df_sentiment = sentiment_analysis_transformers(df_cleaned, 'tweet_content')
+# Sentiment Analysis using Hungging Face Transformers
+print("Analyse des sentiments à l'aide de Hungging Face Transformers")
+df_sentiment = sentiment_analysis_transformers(df_cleaned, 'tweet_content')
 
-    # # Hashtag Generation
-    # df_hashtags = hashtag_generator(df_sentiment, 'tweet_content')
+# Hashtag Generation
+print("Génération de hashtags à l'aide de NLTk")
+df_hashtags = hashtag_generator(df_sentiment, 'tweet_content')
 
-    # # Emotion Recognition
-    # df_emotions = emotion_recognition(df_hashtags, 'tweet_content')
+# Set a column as index, then reset the index
+df_hashtags['id_dist'] = [uuid.uuid4() for _ in range(len(df_hashtags))]
+df_with_hashtags = df_hashtags.set_index('id_dist')  # Set 'id_dist' as the index temporarily
 
-    # # Insert Data into SQL Server
-    # insert_data(df_emotions)
+# Reset the index without the 'id_dist' column
+df_with_hashtags = df_with_hashtags.reset_index(drop=False)
+# Explode the hashtags column
+final_1 = df_with_hashtags.explode('hashtag')
+
+# Reset the index for a cleaner output
+final = final_1.reset_index(drop=True)
+
+# Emotion Recognition
+print("Reconnaissance des émotions à l'aide de Hungging Face Transformers")
+df_emotions = emotion_recognition(final, 'tweet_content')
+
+# Last veriifications after analysis
+
+df_cleaned = df_emotions.dropna(subset=['sentiment_score'])  # This drops rows where sentiment_score is NaN
+
+
+# Drop rows where sentiment_score is NaN after coercion
+df_cleaned = df_cleaned.dropna(subset=['sentiment_score'])
+df_cleaned['sentiment_score'] = df_cleaned['sentiment_score'].apply(lambda x: round(x, 2))
+
+# Convert sentiment_score to Decimal if required
+df_cleaned['sentiment_score'] = df_cleaned['sentiment_score'].astype(float)
+
+print(df_cleaned['sentiment_score'].head())
+
+# Insert Data into SQL Server
+print('Insertion des résultat dans SSMS')
+
+insert_data(df_cleaned)
